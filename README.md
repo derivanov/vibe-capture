@@ -30,6 +30,20 @@ npm start
 
 A control panel opens in Chrome. That's it.
 
+<details>
+<summary><b>Manual install (if you prefer not to run the script)</b></summary>
+
+Requirements: **Node.js 18+** and **ffmpeg** in your PATH.
+
+```bash
+git clone https://github.com/derivanov/vibe-capture.git
+cd vibe-capture
+npm install
+npm start
+```
+
+</details>
+
 ---
 
 ## How to use

@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vibe Capture</title>
+<style>
+  :root {
+    --bg: #111118;
+    --surface: #1a1a24;
+    --surface2: #22222e;
+    --border: #2a2a3a;
+    --text: #e4e4ef;
+    --text2: #888899;
+    --accent: #5b6cf7;
+    --accent-hover: #7080ff;
+    --red: #e05555;
+    --green: #3dc9a0;
+    --yellow: #e6b43c;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+    background: var(--bg); color: var(--text);
+    padding: 20px 16px;
+    -webkit-app-region: drag; user-select: none;
+  }
+  input, button, label, .card, .actions, .result, a {
+    -webkit-app-region: no-drag; user-select: auto;
+  }
+  .header { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+  .logo {
+    width: 28px; height: 28px; border-radius: 7px;
+    background: linear-gradient(135deg, var(--accent), #8b5cf6);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; color: white;
+  }
+  .header h1 { font-size: 16px; font-weight: 600; }
+  .status {
+    margin-left: auto; font-size: 11px; padding: 3px 9px; border-radius: 20px;
+    background: var(--surface2); color: var(--text2);
+  }
+  .status.recording { background: rgba(224,85,85,0.15); color: var(--red); }
+  .status.ready { background: rgba(61,201,160,0.15); color: var(--green); }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px; margin-bottom: 8px;
+  }
+  .card-title {
+    font-size: 10px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.7px; color: var(--text2); margin-bottom: 10px;
+  }
+  .url-row { display: flex; gap: 6px; }
+  .url-row input { flex: 1; min-width: 0; }
+
+  input[type="text"], input[type="number"] {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text);
+    padding: 7px 9px; font-size: 13px; font-family: inherit; outline: none;
+    transition: border-color 0.15s;
+  }
+  input:focus { border-color: var(--accent); }
+  input[type="number"] { width: 70px; }
+
+  .fields { display: flex; flex-wrap: wrap; gap: 8px; }
+  .field { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+  .field label { font-size: 11px; color: var(--text2); }
+  .field input[type="number"] { width: 100%; }
+  .field-hint { font-size: 10px; color: var(--text2); margin-top: 2px; }
+  .field-hint.auto { color: var(--accent); }
+
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; }
+  .toggle-row .card-title { margin-bottom: 0; }
+  .toggle { position: relative; width: 38px; height: 20px; cursor: pointer; }
+  .toggle input { display: none; }
+  .toggle .sl {
+    position: absolute; inset: 0; background: var(--surface2);
+    border-radius: 10px; border: 1px solid var(--border); transition: background 0.2s;
+  }
+  .toggle .sl::after {
+    content: ''; position: absolute; width: 14px; height: 14px; border-radius: 50%;
+    background: var(--text2); top: 2px; left: 2px;
+    transition: transform 0.2s, background 0.2s;
+  }
+  .toggle input:checked + .sl { background: var(--accent); border-color: var(--accent); }
+  .toggle input:checked + .sl::after { transform: translateX(18px); background: white; }
+
+  .format-row { display: flex; gap: 2px; background: var(--surface2); border-radius: 6px; padding: 2px; }
+  .seg-btn {
+    flex: 1; padding: 5px 8px; text-align: center;
+    font-size: 12px; font-family: inherit; border: none;
+    border-radius: 5px; background: none; color: var(--text2);
+    cursor: pointer; transition: all 0.15s; white-space: nowrap;
+  }
+  .seg-btn.active { background: var(--accent); color: white; }
+  .seg-btn:hover:not(.active) { background: var(--border); color: var(--text); }
+
+  .actions { display: flex; gap: 6px; margin-top: 4px; }
+  button {
+    font-family: inherit; font-size: 13px; font-weight: 500;
+    border: none; border-radius: 7px; padding: 8px 14px;
+    cursor: pointer; transition: all 0.15s;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .btn-primary { background: var(--accent); color: white; flex: 1; justify-content: center; }
+  .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+  .btn-danger { background: rgba(224,85,85,0.15); color: var(--red); }
+  .btn-danger:hover:not(:disabled) { background: rgba(224,85,85,0.25); }
+  .btn-ghost { background: var(--surface2); color: var(--text); }
+  .btn-ghost:hover:not(:disabled) { background: var(--border); }
+  button:disabled { opacity: 0.4; cursor: default; }
+
+  .progress-wrap { margin-top: 6px; display: none; }
+  .progress-wrap.visible { display: block; }
+  .progress-bar-bg { width: 100%; height: 4px; background: var(--surface2); border-radius: 2px; overflow: hidden; margin-bottom: 6px; }
+  .progress-bar { height: 100%; background: var(--accent); border-radius: 2px; width: 0%; transition: width 0.2s; }
+  .progress-text { font-size: 11px; color: var(--text2); display: flex; justify-content: space-between; }
+  .progress-extra { font-size: 10px; color: var(--text2); text-align: right; margin-top: 3px; }
+
+  .result {
+    display: none; align-items: center; gap: 10px;
+    padding: 10px 12px; margin-top: 8px;
+    background: rgba(61,201,160,0.08); border: 1px solid rgba(61,201,160,0.2); border-radius: 8px;
+  }
+  .result.visible { display: flex; }
+  .result.partial { background: rgba(230,180,60,0.1); border-color: rgba(230,180,60,0.3); }
+  .result-icon { color: var(--green); font-size: 16px; }
+  .result.partial .result-icon { color: var(--yellow); }
+  .result-info { flex: 1; }
+  .result-name { font-size: 13px; font-weight: 500; }
+  .result-meta { font-size: 11px; color: var(--text2); margin-top: 1px; }
+  .result a { color: var(--accent); text-decoration: none; font-size: 12px; font-weight: 500; white-space: nowrap; }
+  .result a:hover { text-decoration: underline; }
+
+  .encoding-msg { display: none; text-align: center; padding: 10px; color: var(--text2); font-size: 13px; }
+  .encoding-msg.visible { display: block; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .encoding-msg span { animation: pulse 1.5s ease-in-out infinite; }
+
+  .collapse-body {
+    overflow: hidden; max-height: 0; opacity: 0;
+    transition: max-height 0.25s ease, opacity 0.2s, margin-top 0.2s; margin-top: 0;
+  }
+  .collapse-body.open { max-height: 500px; opacity: 1; margin-top: 10px; }
+
+  .accordion-row { display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; }
+  .accordion-row .card-title { margin-bottom: 0; }
+  .accordion-chevron { font-size: 10px; color: var(--text2); transition: transform 0.2s; margin-left: 8px; }
+  .accordion-row.expanded .accordion-chevron { transform: rotate(180deg); }
+
+  .scroll-fields { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+
+  .kb-hint { display: none; text-align: center; font-size: 11px; color: var(--text2); margin-top: 6px; }
+  .kb-hint.visible { display: block; }
+  kbd { display: inline-block; padding: 1px 5px; background: var(--surface2); border: 1px solid var(--border); border-radius: 3px; font-family: inherit; font-size: 10px; }
+
+  .error { display: none; padding: 10px 12px; background: rgba(224,85,85,0.1); border: 1px solid rgba(224,85,85,0.2); border-radius: 7px; color: var(--red); font-size: 12px; margin-top: 8px; }
+  .error.visible { display: block; }
+
+  .output-hint { font-size: 10px; color: var(--text2); margin-top: 6px; text-align: right; }
+  .output-hint .warn { color: var(--yellow); }
+
+  .enc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .enc-grid .field.wide { grid-column: span 2; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">V</div>
+  <h1>Vibe Capture</h1>
+  <div class="status" id="statusBadge">...</div>
+</div>
+
+<!-- URL -->
+<div class="card">
+  <div class="url-row">
+    <input type="text" id="url" placeholder="https://figma.com/proto/...">
+    <button class="btn-primary" id="btnOpen" style="flex:none; padding:8px 14px;">Open</button>
+  </div>
+  <div style="display:flex; align-items:center; gap:6px; margin-top:8px;">
+    <label class="toggle" style="width:34px; height:18px;">
+      <input type="checkbox" id="autoRecord">
+      <span class="sl"></span>
+    </label>
+    <label for="autoRecord" style="font-size:11px; color:var(--text2); cursor:pointer;">Auto-record after open</label>
+  </div>
+</div>
+
+<!-- Viewport -->
+<div class="card">
+  <div class="card-title">Viewport</div>
+  <div class="format-row" style="margin-bottom: 8px;">
+    <button class="seg-btn active" data-res="1920x1080">1920×1080</button>
+    <button class="seg-btn" data-res="1440x900">1440×900</button>
+    <button class="seg-btn" data-res="1280x800">1280×800</button>
+    <button class="seg-btn" data-res="1024x768">1024×768</button>
+    <button class="seg-btn" data-res="390x844">Mobile</button>
+  </div>
+  <div class="fields">
+    <div class="field">
+      <label>Width</label>
+      <input type="number" id="width" value="1920" min="320" max="3840">
+    </div>
+    <div class="field">
+      <label>Height</label>
+      <input type="number" id="height" value="1080" min="240" max="2160">
+    </div>
+    <div class="field" style="flex: 0 0 auto; justify-content: center;">
+      <label>&nbsp;</label>
+      <label class="toggle" title="Retina 2x output">
+        <input type="checkbox" id="retina">
+        <span class="sl"></span>
+      </label>
+      <label style="font-size:10px; color:var(--text2); text-align:center; margin-top:1px;">Retina</label>
+    </div>
+  </div>
+  <div class="output-hint" id="outputHint">Output: 1920 &times; 1080</div>
+</div>
+
+<!-- Recording -->
+<div class="card">
+  <div class="card-title">Recording</div>
+  <div class="fields">
+    <div class="field" style="flex: 0 0 70px;">
+      <label>FPS</label>
+      <input type="number" id="fps" value="60" min="1" max="120">
+    </div>
+    <div class="field" style="flex: 0 0 90px;">
+      <label>Duration (s)</label>
+      <input type="number" id="duration" value="10" min="0.5" max="10000" step="0.5">
+      <div class="field-hint" id="durationHint"></div>
+    </div>
+    <div class="field">
+      <label>Format</label>
+      <div class="format-row">
+        <button class="seg-btn active" data-format="mp4">MP4</button>
+        <button class="seg-btn" data-format="prores">ProRes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Encoding (collapsible) -->
+<div class="card" id="encodingCard">
+  <div class="accordion-row" id="encodingHeader">
+    <div class="card-title" id="encodingTitle">Encoding (H.264)</div>
+    <span class="accordion-chevron">&#9660;</span>
+  </div>
+  <div class="collapse-body" id="encodingBody">
+    <div class="enc-grid">
+      <div class="field wide">
+        <label>Preset</label>
+        <div class="format-row">
+          <button class="seg-btn" data-group="preset" data-val="ultrafast">Ultra</button>
+          <button class="seg-btn active" data-group="preset" data-val="fast">Fast</button>
+          <button class="seg-btn" data-group="preset" data-val="medium">Medium</button>
+          <button class="seg-btn" data-group="preset" data-val="slow">Slow</button>
+          <button class="seg-btn" data-group="preset" data-val="veryslow">Best</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>CRF (0-51)</label>
+        <input type="number" id="crf" value="18" min="0" max="51">
+      </div>
+      <div class="field">
+        <label>Frame JPEG Q</label>
+        <input type="number" id="jpegQuality" value="95" min="50" max="100">
+      </div>
+      <div class="field wide">
+        <label>Tune</label>
+        <div class="format-row">
+          <button class="seg-btn active" data-group="tune" data-val="none">None</button>
+          <button class="seg-btn" data-group="tune" data-val="film">Film</button>
+          <button class="seg-btn" data-group="tune" data-val="animation">Animation</button>
+          <button class="seg-btn" data-group="tune" data-val="stillimage">Still Image</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Profile</label>
+        <div class="format-row">
+          <button class="seg-btn" data-group="profile" data-val="baseline">Base</button>
+          <button class="seg-btn active" data-group="profile" data-val="high">High</button>
+          <button class="seg-btn" data-group="profile" data-val="high444">444</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Pixel Format</label>
+        <div class="format-row">
+          <button class="seg-btn active" data-group="pixFmt" data-val="yuv420p">420p</button>
+          <button class="seg-btn" data-group="pixFmt" data-val="yuv422p">422p</button>
+          <button class="seg-btn" data-group="pixFmt" data-val="yuv444p">444p</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Cursor Overlay -->
+<div class="card">
+  <div class="toggle-row">
+    <div class="card-title">Show Cursor</div>
+    <label class="toggle">
+      <input type="checkbox" id="showCursor">
+      <span class="sl"></span>
+    </label>
+  </div>
+</div>
+
+<!-- Scroll -->
+<div class="card">
+  <div class="toggle-row">
+    <div class="card-title" id="scrollTitle">Auto-Scroll</div>
+    <label class="toggle">
+      <input type="checkbox" id="scrollEnabled">
+      <span class="sl"></span>
+    </label>
+  </div>
+  <div class="collapse-body" id="scrollFields">
+    <div class="scroll-fields">
+      <div class="field">
+        <label>Speed (px/s)</label>
+        <input type="number" id="scrollSpeed" value="300" min="10" max="5000">
+      </div>
+      <div class="field">
+        <label>Start (s)</label>
+        <input type="number" id="scrollDelay" value="1" min="0" max="60" step="0.1">
+      </div>
+      <div class="field">
+        <label>End (s)</label>
+        <input type="number" id="scrollDelayEnd" value="1" min="0" max="60" step="0.1">
+      </div>
+      <div class="field" style="grid-column: span 3;">
+        <label>Ease in/out (s)</label>
+        <input type="number" id="scrollEase" value="0.8" min="0" max="10" step="0.1" style="width: 100%;">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Actions -->
+<div class="actions">
+  <button class="btn-primary" id="btnRecord" disabled>Record</button>
+  <button class="btn-ghost" id="btnClick" disabled>Next Slide</button>
+  <button class="btn-danger" id="btnStop" disabled>Stop</button>
+</div>
+
+<div class="kb-hint" id="kbHint"><kbd>Space</kbd> next slide &nbsp; <kbd>Q</kbd> stop</div>
+
+<div class="progress-wrap" id="progress">
+  <div class="progress-bar-bg"><div class="progress-bar" id="progressBar"></div></div>
+  <div class="progress-text">
+    <span id="progressFrames">0 / 0</span>
+    <span id="progressTime">--</span>
+  </div>
+  <div class="progress-extra" id="progressExtra"></div>
+</div>
+
+<div class="encoding-msg" id="encoding"><span>Encoding video...</span></div>
+
+<div class="result" id="result">
+  <div class="result-icon">&#10003;</div>
+  <div class="result-info">
+    <div class="result-name" id="resultName"></div>
+    <div class="result-meta" id="resultMeta"></div>
+  </div>
+  <a id="resultDownload" href="#" download>Download</a>
+</div>
+
+<div class="error" id="error"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+const elUrl = $('url'), elFps = $('fps'), elDuration = $('duration');
+const elWidth = $('width'), elHeight = $('height'), elRetina = $('retina');
+const elShowCursor = $('showCursor');
+const elScrollEnabled = $('scrollEnabled'), elScrollFields = $('scrollFields');
+const elScrollSpeed = $('scrollSpeed'), elScrollDelay = $('scrollDelay');
+const elScrollDelayEnd = $('scrollDelayEnd'), elScrollEase = $('scrollEase');
+const elEncodingBody = $('encodingBody');
+const elAutoRecord = $('autoRecord');
+const btnOpen = $('btnOpen'), btnRecord = $('btnRecord');
+const btnClick = $('btnClick'), btnStop = $('btnStop');
+
+let format = 'mp4';
+let currentState = 'idle';
+let scrollHeight = 0;
+let durationManual = false;
+let retinaAutoSet = false;
+let ws;
+
+let enc = { preset: 'fast', tune: 'none', profile: 'high', pixFmt: 'yuv420p' };
+
+// ---- Output resolution hint ----
+function updateOutputHint() {
+  const w = parseInt(elWidth.value) || 1920;
+  const h = parseInt(elHeight.value) || 1080;
+  const s = elRetina.checked ? 2 : 1;
+  let html = `Output: ${w * s} &times; ${h * s}`;
+  if (s > 1) {
+    html += ' (Retina 2x)';
+    if (w > 1024) {
+      html += ' &mdash; <span class="warn">slow, not recommended</span>';
+    }
+  }
+  $('outputHint').innerHTML = html;
+}
+elWidth.addEventListener('input', updateOutputHint);
+elHeight.addEventListener('input', updateOutputHint);
+elRetina.addEventListener('change', updateOutputHint);
+updateOutputHint();
+
+// ---- Resolution presets ----
+document.querySelectorAll('[data-res]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-res]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const [w, h] = btn.dataset.res.split('x').map(Number);
+    elWidth.value = w;
+    elHeight.value = h;
+    if (w < 768 && !elRetina.checked) {
+      elRetina.checked = true;
+      retinaAutoSet = true;
+    } else if (w >= 768 && retinaAutoSet) {
+      elRetina.checked = false;
+      retinaAutoSet = false;
+    }
+    updateOutputHint();
+  });
+});
+elWidth.addEventListener('input', () => {
+  document.querySelectorAll('[data-res]').forEach(b => b.classList.remove('active'));
+  updateOutputHint();
+});
+elHeight.addEventListener('input', () => {
+  document.querySelectorAll('[data-res]').forEach(b => b.classList.remove('active'));
+  updateOutputHint();
+});
+elRetina.addEventListener('change', () => { retinaAutoSet = false; });
+
+// ---- Scroll toggle ----
+elScrollEnabled.addEventListener('change', () => {
+  elScrollFields.classList.toggle('open', elScrollEnabled.checked);
+  updateAutoDuration();
+});
+
+// ---- Encoding accordion ----
+$('encodingHeader').addEventListener('click', () => {
+  const open = elEncodingBody.classList.toggle('open');
+  $('encodingHeader').classList.toggle('expanded', open);
+});
+
+// ---- Auto-duration calculation ----
+function updateAutoDuration() {
+  const hint = $('durationHint');
+  if (!elScrollEnabled.checked || scrollHeight <= 0) {
+    hint.textContent = ''; hint.className = 'field-hint'; return;
+  }
+  const speed = parseFloat(elScrollSpeed.value) || 300;
+  const ease = parseFloat(elScrollEase.value) || 0.8;
+  const delayStart = parseFloat(elScrollDelay.value) || 0;
+  const delayEnd = parseFloat(elScrollDelayEnd.value) || 0;
+  const auto = Math.min(delayStart + scrollHeight / speed + ease + delayEnd, 10000);
+  hint.textContent = `auto: ${auto.toFixed(1)}s`;
+  hint.className = 'field-hint auto';
+  if (!durationManual) elDuration.value = parseFloat(auto.toFixed(1));
+}
+elDuration.addEventListener('input', () => { durationManual = true; $('durationHint').textContent = ''; });
+[elScrollSpeed, elScrollDelay, elScrollDelayEnd, elScrollEase].forEach(el => {
+  el.addEventListener('input', () => { durationManual = false; updateAutoDuration(); });
+});
+elDuration.addEventListener('change', () => {
+  let v = parseFloat(elDuration.value);
+  if (v > 10000) elDuration.value = 10000;
+  if (v < 0.5) elDuration.value = 0.5;
+});
+
+// ---- Format toggle ----
+document.querySelectorAll('[data-format]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-format]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    format = btn.dataset.format;
+    $('encodingCard').style.display = format === 'prores' ? 'none' : '';
+  });
+});
+
+// ---- Encoding button groups ----
+document.querySelectorAll('[data-group]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const g = btn.dataset.group;
+    document.querySelectorAll(`[data-group="${g}"]`).forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    enc[g] = btn.dataset.val;
+  });
+});
+
+// ---- WebSocket ----
+function connect() {
+  ws = new WebSocket(`ws://${location.host}`);
+  ws.onopen = () => { if (currentState === 'idle') updateStatus('idle'); };
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'state') { currentState = msg.state; updateUI(msg); }
+    else if (msg.type === 'progress') {
+      $('progressBar').style.width = msg.percent + '%';
+      $('progressFrames').textContent = `${msg.frame} / ${msg.total}`;
+      $('progressTime').textContent = `${msg.elapsed}s / ~${msg.eta}s left`;
+      if (msg.diskMB !== undefined) $('progressExtra').textContent = `Frames on disk: ${msg.diskMB} MB`;
+    }
+    else if (msg.type === 'error') showError(msg.message);
+  };
+  ws.onclose = () => { updateStatus('disconnected'); setTimeout(connect, 2000); };
+}
+connect();
+function send(obj) { if (ws?.readyState === 1) ws.send(JSON.stringify(obj)); }
+
+// ---- UI updates ----
+function updateUI(msg) {
+  const s = msg.state;
+  updateStatus(s);
+  $('progress').classList.toggle('visible', s === 'recording');
+  $('encoding').classList.toggle('visible', s === 'encoding');
+  $('kbHint').classList.toggle('visible', s === 'recording');
+
+  btnOpen.disabled = s !== 'idle' && s !== 'done' && s !== 'ready';
+  btnOpen.textContent = s === 'opening' ? '...' : 'Open';
+  btnRecord.disabled = s !== 'ready';
+  btnClick.disabled = s !== 'recording' && s !== 'ready';
+  btnStop.disabled = s !== 'recording';
+  const locked = s === 'recording' || s === 'encoding' || s === 'opening';
+  document.querySelectorAll('input').forEach(el => el.disabled = locked);
+
+  if (s === 'recording') {
+    $('progressBar').style.width = '0%';
+    $('progressFrames').textContent = '0 / 0';
+    $('progressTime').textContent = 'starting...';
+    $('progressExtra').textContent = '';
+    $('result').classList.remove('visible', 'partial');
+    $('error').classList.remove('visible');
+  }
+  if (s === 'done' && msg.filename) {
+    const r = $('result');
+    r.classList.remove('partial');
+    $('resultName').textContent = msg.filename;
+    let meta = `${msg.size} MB \u00b7 ${msg.frames} frames \u00b7 ${msg.videoDuration}s @ ${msg.fps}fps`;
+    if (msg.partial) { meta = 'PARTIAL \u00b7 ' + meta; r.classList.add('partial'); }
+    $('resultMeta').textContent = meta;
+    if (msg.downloadUrl) {
+      $('resultDownload').href = msg.downloadUrl;
+      $('resultDownload').download = msg.filename;
+      $('resultDownload').style.display = '';
+    } else {
+      $('resultDownload').style.display = 'none';
+    }
+    r.classList.add('visible');
+  }
+  if (s === 'ready' && msg.scrollHeight !== undefined) {
+    scrollHeight = msg.scrollHeight;
+    $('scrollTitle').textContent = scrollHeight > 0
+      ? `Auto-Scroll (${scrollHeight}px)` : 'Auto-Scroll (page not scrollable)';
+    durationManual = false;
+    updateAutoDuration();
+    if (msg.outW && msg.outH) {
+      $('outputHint').innerHTML = `Output: ${msg.outW} &times; ${msg.outH} &nbsp;(viewport ${msg.cssW}&times;${msg.cssH} @${Math.round(msg.outW/msg.cssW)}x)`;
+    }
+  }
+}
+function updateStatus(s) {
+  const labels = { disconnected:'Offline', idle:'Ready', opening:'Opening...', ready:'Page Open', recording:'REC', encoding:'Encoding...', done:'Done' };
+  const el = $('statusBadge');
+  el.textContent = labels[s] || s;
+  el.className = 'status';
+  if (s === 'recording') el.classList.add('recording');
+  if (s === 'ready' || s === 'done') el.classList.add('ready');
+}
+function showError(message) {
+  const el = $('error');
+  el.textContent = message; el.classList.add('visible');
+  setTimeout(() => el.classList.remove('visible'), 8000);
+}
+
+// ---- Actions ----
+function getRecordParams() {
+  return {
+    fps: parseInt(elFps.value) || 60,
+    duration: Math.min(parseFloat(elDuration.value) || 10, 10000),
+    durationExplicit: durationManual,
+    prores: format === 'prores',
+    preset: enc.preset, crf: parseInt($('crf').value) || 18,
+    tune: enc.tune, profile: enc.profile, pixFmt: enc.pixFmt,
+    jpegQuality: parseInt($('jpegQuality').value) || 95,
+    showCursor: elShowCursor.checked,
+    scroll: elScrollEnabled.checked,
+    scrollSpeed: parseFloat(elScrollSpeed.value) || 300,
+    scrollDelay: parseFloat(elScrollDelay.value) || 1,
+    scrollDelayEnd: parseFloat(elScrollDelayEnd.value) || 1,
+    scrollEase: parseFloat(elScrollEase.value) || 0.8,
+    width: parseInt(elWidth.value) || 1920,
+    height: parseInt(elHeight.value) || 1080,
+    retina: elRetina.checked,
+  };
+}
+
+btnOpen.addEventListener('click', () => {
+  let url = elUrl.value.trim();
+  if (!url) { elUrl.focus(); return; }
+  if (!/^https?:\/\//i.test(url)) { url = 'https://' + url; elUrl.value = url; }
+  $('result').classList.remove('visible');
+  $('error').classList.remove('visible');
+  const msg = {
+    action: 'open', url,
+    width: parseInt(elWidth.value) || 1920,
+    height: parseInt(elHeight.value) || 1080,
+    retina: elRetina.checked,
+  };
+  if (elAutoRecord.checked) {
+    Object.assign(msg, getRecordParams(), { autoRecord: true });
+  }
+  send(msg);
+});
+
+btnRecord.addEventListener('click', () => {
+  send({ action: 'record', ...getRecordParams() });
+});
+
+btnClick.addEventListener('click', () => {
+  send({ action: 'click', width: parseInt(elWidth.value) || 1920, height: parseInt(elHeight.value) || 1080, fps: parseInt(elFps.value) || 60 });
+});
+btnStop.addEventListener('click', () => send({ action: 'stop' }));
+
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.code === 'Space' && currentState === 'recording') { e.preventDefault(); btnClick.click(); }
+  if (e.key === 'q' && currentState === 'recording') btnStop.click();
+});
+elUrl.addEventListener('keydown', (e) => { if (e.key === 'Enter') btnOpen.click(); });
+</script>
+</body>
+</html>

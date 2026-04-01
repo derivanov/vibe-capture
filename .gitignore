@@ -1,0 +1,5 @@
+node_modules/
+recordings/
+*_frames/
+.DS_Store
+.claude/

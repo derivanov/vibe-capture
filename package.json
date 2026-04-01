@@ -1,0 +1,16 @@
+{
+  "name": "vibe-capture",
+  "version": "0.1.0",
+  "description": "Frame-perfect web page recorder with time virtualization. No dropped frames, no stuttering.",
+  "type": "module",
+  "author": "Sasha Derivanov",
+  "license": "MIT",
+  "scripts": {
+    "start": "node server.mjs",
+    "capture": "node capture.mjs"
+  },
+  "dependencies": {
+    "puppeteer": "^24.0.0",
+    "ws": "^8.20.0"
+  }
+}

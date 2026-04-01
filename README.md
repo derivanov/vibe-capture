@@ -1,187 +1,114 @@
 # Vibe Capture
 
-Frame-perfect web page recorder. Records any website as a smooth, constant frame rate video with no dropped frames and no stuttering.
+Frame-perfect web page recorder. Records any website as a smooth, constant frame rate video — no dropped frames, no stuttering, ever.
 
 Built for recording Figma prototypes, landing pages, animations, and anything that runs in a browser.
 
-> **v0.1 — Early release.** This is a raw first version. There will be bugs. Tested only on macOS Sequoia 26. I'm a designer, not a developer — I built this tool for my own needs and decided to share it.
+> **v0.1 — Early release.** This is raw. There will be bugs. Tested only on macOS 26. I'm a designer, not a developer — I made this for myself and decided to share it.
 
-**Author:** [Sasha Derivanov](https://github.com/sasha-derivanov)
+**Author:** [Sasha Derivanov](https://github.com/derivanov)
 
 ---
 
-## How it works
+## Install & Run
 
-Unlike screen recorders that capture in real time (and drop frames when your computer is slow), Vibe Capture freezes time inside the browser. It advances the clock frame by frame, takes a screenshot of each frame, then stitches them into a video. The result is always smooth, always the exact FPS you asked for, regardless of how fast your computer is.
-
-This means a 10-second video might take 30-60 seconds to record — but the output is perfect.
-
-## What you need
-
-- **macOS** (tested on macOS 26, might work on earlier versions)
-- **Node.js 18+** (to check: open Terminal, type `node --version`)
-- **ffmpeg** (to encode the final video)
-
-### Installing Node.js (if you don't have it)
-
-1. Go to [nodejs.org](https://nodejs.org)
-2. Download the **LTS** version
-3. Open the downloaded file and follow the installer
-4. Restart Terminal, then type `node --version` — you should see something like `v20.x.x`
-
-### Installing ffmpeg (if you don't have it)
-
-The easiest way is with Homebrew. If you don't have Homebrew:
+Open Terminal, then:
 
 ```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+git clone https://github.com/derivanov/vibe-capture.git
+cd vibe-capture
+bash setup.sh
 ```
 
-Then install ffmpeg:
+The setup script installs everything automatically (Node.js, ffmpeg, dependencies). Takes a few minutes the first time.
 
-```bash
-brew install ffmpeg
-```
-
-To verify: `ffmpeg -version`
-
-## Setup
-
-1. Download or clone this repository
-2. Open Terminal
-3. Navigate to the folder:
-   ```bash
-   cd ~/Downloads/vibe-capture
-   ```
-   (or wherever you put it)
-4. Install dependencies:
-   ```bash
-   npm install
-   ```
-   This will download Chromium (~200 MB) and other dependencies. Wait for it to finish.
-
-## Usage (Web UI — recommended)
-
-Start the control panel:
+When it's done:
 
 ```bash
 npm start
 ```
 
-A Chrome window will open with the Vibe Capture control panel.
+A control panel opens in Chrome. That's it.
 
-### Step by step
+---
 
-1. **Paste a URL** into the URL field (e.g., a Figma prototype link, a website, a landing page)
-2. **Click Open** — a second browser window opens with your page
-3. **Adjust settings** if needed:
-   - **Viewport**: pick a resolution preset or type custom dimensions
-   - **FPS**: frames per second (default 60, use 30 for smaller files)
-   - **Duration**: how long to record in seconds
-   - **Format**: MP4 (default) or ProRes (for video editing)
-   - **Auto-Scroll**: enable to automatically scroll through the page
-   - **Cursor**: show/hide a custom cursor dot in the recording
-4. **Navigate** to the right state in the browser window (the right slide, scrolled to the right spot, etc.)
-5. **Click Record** — recording starts
-6. Wait for it to finish (you'll see a progress bar)
-7. **Download** the result
+## How to use
 
-### Tips
+1. **Paste a URL** and click **Open** — a browser window opens with your page
+2. **Set up** what you need (resolution, duration, FPS, auto-scroll, etc.)
+3. **Click Record** — wait for the progress bar to finish
+4. **Download** the video
 
-- **Auto-record**: Enable "Auto-record after open" to start recording immediately when the page loads. Useful for capturing entrance animations.
-- **Auto-scroll**: Great for recording full-page scrolls of landing pages. The scroll has smooth easing and you can adjust speed and delays.
-- **Next Slide**: Click this button (or press Space) to advance Figma prototype slides during recording.
-- **Stop early**: Click Stop (or press Q) to end recording early. You'll still get a video from the frames captured so far.
-- **Retina**: Doubles the output resolution. Works great at smaller viewports (1024 and below). At larger sizes it's slow — you'll see a yellow warning.
-- **Mobile preset**: Picks 390x844 and enables Retina automatically. Good for recording mobile versions of websites.
+### Keyboard shortcuts during recording
 
-### Encoding settings
+| Key | Action |
+|---|---|
+| Space | Click center of page (advance Figma slides) |
+| Q | Stop recording early |
 
-Click "Encoding" to expand advanced H.264 settings:
+---
 
-- **Preset**: Ultrafast is fastest to encode, Best is smallest file. Default "Fast" is a good balance.
-- **CRF**: Quality. Lower = better quality, bigger file. Default 18 is visually lossless.
-- **Tune**: "Film" for live action sites, "Animation" for flat/illustrated sites, "Still Image" for mostly-static pages.
-- **ProRes**: Use this if you need to edit the video in Final Cut, DaVinci, or Premiere. Larger files but no quality loss.
+## Settings
 
-## Usage (CLI — for automation)
+| Setting | What it does |
+|---|---|
+| **Viewport presets** | 1920x1080, 1440x900, 1280x800, 1024x768, Mobile |
+| **Retina** | 2x output resolution. Best at 1024px and below |
+| **FPS** | Frames per second. 60 = smooth, 30 = smaller file |
+| **Duration** | How many seconds to record |
+| **MP4 / ProRes** | MP4 for sharing, ProRes for editing in Final Cut / DaVinci / Premiere |
+| **Auto-scroll** | Scrolls the page automatically with smooth easing |
+| **Auto-record** | Starts recording immediately after Open (catches entrance animations) |
+| **Cursor** | Shows a dot cursor in the recording |
 
-For scripting or if you prefer the command line:
+### Encoding (advanced)
+
+Click "Encoding" to expand. These are H.264 settings for MP4:
+
+- **Preset** — Ultrafast (fast encode) to Best (smallest file). Default: Fast
+- **CRF** — Quality. Lower = better. Default: 18 (visually lossless)
+- **Tune** — Film / Animation / Still Image. Optimizes compression for content type
+
+---
+
+## CLI (optional)
+
+There's also a command-line version:
 
 ```bash
 node capture.mjs "https://example.com" --duration 5 --fps 60
-```
-
-### CLI options
-
-```
---fps <n>            Frames per second (default: 60)
---duration <n>       Duration in seconds (default: 10)
---output <file>      Output file (default: recording.mp4)
---width <n>          Viewport width (default: 1920)
---height <n>         Viewport height (default: 1080)
---scroll             Enable auto-scroll
---scroll-speed <n>   Scroll speed in px/sec (default: 300)
---prores             Export as ProRes .mov
---headless           Run without showing the browser
---no-cursor          Disable cursor overlay
---preset <name>      H.264 preset (default: fast)
---crf <n>            Quality 0-51 (default: 18)
-```
-
-### CLI examples
-
-```bash
-# Record a Figma prototype for 5 seconds
-node capture.mjs "https://figma.com/proto/abc123" --duration 5
-
-# Auto-scroll a landing page
 node capture.mjs "https://example.com" --scroll --scroll-speed 200
-
-# Record mobile viewport
 node capture.mjs "https://example.com" --width 390 --height 844 --scale 2
-
-# Export ProRes for video editing
 node capture.mjs "https://example.com" --prores --output edit.mov
-
-# Low quality, small file, fast encode
-node capture.mjs "https://example.com" --fps 30 --crf 28 --preset ultrafast
 ```
+
+Run `node capture.mjs --help` for all options.
+
+---
+
+## How it works
+
+Unlike screen recorders that capture in real time (and drop frames when your Mac is busy), Vibe Capture **freezes time** inside the browser. It advances the clock frame by frame, screenshots each one, then encodes them into video.
+
+A 10-second recording might take 30-60 seconds — but the output is always perfectly smooth at the exact FPS you set.
+
+---
 
 ## Troubleshooting
 
-**"Page not scrollable" but the page does scroll**
-Some modern websites scroll inside a container div, not the page body. Vibe Capture detects this automatically, but very unusual page structures might not be detected. If this happens, try recording without auto-scroll and scrolling manually in the browser window during recording.
+**"Page not scrollable" but the page scrolls fine**
+Some sites use custom scroll containers. Vibe Capture tries to detect them, but unusual setups might not work. Try scrolling manually during recording instead.
 
-**Recording is slow**
-That's expected — frame-by-frame capture takes time. Tips to speed it up:
-- Lower the FPS (30 instead of 60)
-- Use a smaller resolution
-- Don't use Retina at resolutions above 1024px wide
-
-**Video has wrong colors**
-If using ProRes, colors should be accurate. For H.264 (MP4), some slight color differences are normal due to YUV conversion.
+**Recording takes a long time**
+That's normal. To speed up: use 30fps, lower resolution, skip Retina.
 
 **ffmpeg not found**
-Make sure ffmpeg is installed (`brew install ffmpeg`) and Terminal can find it (`ffmpeg -version`).
+Run `bash setup.sh` again — it will install ffmpeg.
 
-**The browser window looks zoomed out**
-That's normal for non-Retina recordings. The viewport is scaled down to fit your screen. The recorded video will be full resolution.
+**Browser window looks zoomed out**
+Normal for non-Retina. The recording will be full resolution.
 
-## How it works (technical)
-
-Vibe Capture uses Puppeteer to control a Chromium browser. Before the page loads, it injects a time virtualization layer that overrides:
-
-- `requestAnimationFrame`
-- `setTimeout` / `setInterval`
-- `Date.now()` / `performance.now()`
-- `Date` constructor
-- CSS / Web Animations API
-- Video/audio `currentTime`
-
-During recording, real time is frozen. The recorder advances virtual time frame by frame (e.g., 16.67ms per frame at 60fps), takes a CDP screenshot, saves it as JPEG, then advances to the next frame. After all frames are captured, ffmpeg encodes them into the final video.
-
-This guarantees constant frame rate output regardless of system performance.
+---
 
 ## License
 

@@ -1,6 +1,6 @@
 {
   "name": "vibe-capture",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Frame-perfect web page recorder with time virtualization. No dropped frames, no stuttering.",
   "type": "module",
   "author": "Sasha Derivanov",

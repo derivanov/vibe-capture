@@ -4,7 +4,7 @@ Frame-perfect web page recorder. Records any website as a smooth, constant frame
 
 Built for recording Figma prototypes, landing pages, animations, and anything that runs in a browser.
 
-> **v0.1 — Early release.** This is raw. There will be bugs. Tested only on macOS 26. I'm a designer, not a developer — I made this for myself and decided to share it.
+> **v0.2** — Figma video playback fix, mobile emulation, improved scroll detection. Still early — there will be bugs. Tested only on macOS 26.
 
 **Author:** [Sasha Derivanov](https://github.com/derivanov)
 

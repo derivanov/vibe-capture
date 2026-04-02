@@ -124,6 +124,22 @@ const page = (await browser.pages())[0];
 // --- CDP session for fast screenshots ---
 const cdp = await page.createCDPSession();
 
+// --- Mobile emulation (User-Agent, screen, touch) ---
+const isMobileCLI = width < 768;
+if (isMobileCLI) {
+  await cdp.send('Emulation.setUserAgentOverride', {
+    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+    platform: 'iPhone',
+  });
+  await cdp.send('Emulation.setDeviceMetricsOverride', {
+    width, height, deviceScaleFactor: scale,
+    mobile: true,
+    screenWidth: width, screenHeight: height,
+    screenOrientationType: 'portraitPrimary', screenOrientationAngle: 0,
+  });
+  await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
+}
+
 // --- Inject time virtualization (before any page scripts run) ---
 await page.evaluateOnNewDocument(timeVirtualization);
 

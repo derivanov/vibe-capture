@@ -92,6 +92,51 @@ export function timeVirtualization() {
 
   let captureStartVT = 0;
 
+  // ---- Media (video/audio) interception ----
+  // Set up play/pause tracking BEFORE page scripts run (before Figma loads).
+  // We let .play()/.pause() calls through to the browser, but during capture
+  // we track which videos are playing so we can correct their currentTime
+  // to virtual time before each screenshot.
+  const origPlay = HTMLMediaElement.prototype.play;
+  const origPause = HTMLMediaElement.prototype.pause;
+  const mediaRegistry = new Map(); // el → { playing, playVT, playOffset }
+
+  function getMedia(el) {
+    if (!mediaRegistry.has(el)) {
+      mediaRegistry.set(el, { playing: false, playVT: 0, playOffset: 0 });
+    }
+    return mediaRegistry.get(el);
+  }
+
+  HTMLMediaElement.prototype.play = function () {
+    const m = getMedia(this);
+    m.playing = true;
+    m.endedFired = false;
+    if (capturing) {
+      m.playVT = virtualTime;
+      m.playOffset = this.currentTime || 0;
+      // If video is at the end, it's being restarted — reset to 0
+      const dur = this.duration;
+      if (dur && isFinite(dur) && m.playOffset >= dur - 0.05) {
+        m.playOffset = 0;
+        this.currentTime = 0;
+      }
+    }
+    // Actually play (so .paused === false — Figma/sites check this),
+    // but freeze real-time advancement so only our virtual-time
+    // currentTime sets matter.
+    const result = origPlay.call(this);
+    if (capturing) this.playbackRate = 0;
+    return result;
+  };
+
+  HTMLMediaElement.prototype.pause = function () {
+    const m = getMedia(this);
+    m.playing = false;
+    if (capturing) this.playbackRate = 0;
+    return origPause.call(this);
+  };
+
   // ---- Find the real scroll container ----
   // Many modern sites (SPAs, React, Next.js) don't scroll <body> —
   // they scroll a nested <div> with overflow:auto/scroll.
@@ -245,10 +290,16 @@ export function timeVirtualization() {
       }
     }, { capture: true });
 
-    // Pause all media elements and record their start position
+    // Snapshot currently playing videos — record their virtual-time start
+    // and freeze real-time playback (playbackRate = 0)
     document.querySelectorAll('video, audio').forEach(el => {
-      el.__vibeStart = el.currentTime;
-      el.pause();
+      const m = getMedia(el);
+      if (!el.paused) {
+        m.playing = true;
+        m.playVT = virtualTime;
+        m.playOffset = el.currentTime || 0;
+        el.playbackRate = 0; // freeze — we drive currentTime manually
+      }
     });
 
     // Pause all CSS / Web Animations and record their start time
@@ -292,21 +343,36 @@ export function timeVirtualization() {
     rafCallbacks.clear();
     for (const [, cb] of cbs) { try { cb(virtualTime); } catch {} }
 
-    // Sync media elements (video/audio) to virtual time position
+    // Sync media elements to virtual time.
+    // Only touch videos that our registry knows are playing.
+    // We set currentTime right before screenshot to correct real-time drift.
     const elapsedMs = virtualTime - captureStartVT;
     document.querySelectorAll('video, audio').forEach(el => {
-      if (el.__vibeStart === undefined) {
-        el.__vibeStart = el.currentTime;
-        el.pause();
-      }
+      const m = mediaRegistry.get(el);
+      if (!m || !m.playing) return; // skip videos Figma hasn't .play()'d
+
       const dur = el.duration;
       if (!dur || !isFinite(dur)) return;
-      let t = el.__vibeStart + elapsedMs / 1000;
-      if (el.loop) {
-        t = t % dur;
+
+      // Virtual time elapsed since this video's .play() was called
+      const playElapsed = (virtualTime - m.playVT) / 1000;
+      let t = m.playOffset + playElapsed;
+
+      if (t >= dur) {
+        // Video reached its end. Wrap around (keep playing) and notify Figma.
+        // If Figma wants to stop it, it will call .pause().
+        // If Figma wants to loop it, it's already looping seamlessly.
+        t = ((t % dur) + dur) % dur;
+        if (!m.endedFired) {
+          m.endedFired = true;
+          try { el.dispatchEvent(new Event('ended')); } catch {}
+          // Reset flag after Figma has had a chance to respond
+          // (if Figma calls .play() again, endedFired will be reset below)
+        }
       } else {
-        t = Math.min(t, dur);
+        m.endedFired = false;
       }
+
       if (t >= 0) el.currentTime = t;
     });
 

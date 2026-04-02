@@ -180,13 +180,29 @@ async function handleOpen(msg) {
 
   const visualScale = retina ? 1 : (1 / nativeDPR);
 
+  // Mobile emulation: UA + viewport with touch (like Chrome DevTools device mode)
+  if (isMobile) {
+    await targetPage.setUserAgent(
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
+    );
+  }
+
+  // Set viewport + device metrics
   await targetCDP.send('Emulation.setDeviceMetricsOverride', {
     width: cssW,
     height: cssH,
     deviceScaleFactor: dpr,
     mobile: isMobile,
     scale: visualScale,
+    screenWidth: isMobile ? cssW : 0,
+    screenHeight: isMobile ? cssH : 0,
+    screenOrientationType: isMobile ? 'portraitPrimary' : 'landscapePrimary',
+    screenOrientationAngle: isMobile ? 0 : 90,
   });
+
+  if (isMobile) {
+    await targetCDP.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
+  }
 
   // Window = viewport × visual scale + chrome bar
   const winW = Math.round(width * visualScale);
